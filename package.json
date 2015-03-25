@@ -23,6 +23,7 @@
   },
   "homepage": "https://github.com/natevw/js-cnc",
   "dependencies": {
-    "midi": "^0.9.2"
+    "midi": "^0.9.2",
+    "serialport": "^1.6.3"
   }
 }
