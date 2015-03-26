@@ -3,7 +3,7 @@ var midi = require('midi'),
 
 
 var axes = ['X', 'Y', 'Z', 'A', 'B', 'C'],
-    mult = [-0.005, 0.005, -0.0001];
+    mult = [-400.000, 400.000, -400.000];
 axes.length = 3;      // truncate to what machine has
 
 function freq(n) {      // using http://newt.phys.unsw.edu.au/jw/notes.html temperment
@@ -15,18 +15,26 @@ var state = {
   mtime: 100
 };
 setInterval(function () {
-  var mvmt = state.notes.map(freq).sort().reverse().slice(0, axes.length).map(function (f, i) {
-    return axes[i]+(f*mult[i]).toFixed(4);
-  });
-  if (mvmt.length) {
-    // N ms = 1 min / X
-    // X * N ms = 1 min
-    // X = 1 min / N ms
-    // X = 60e3 / N ms
+  if (!state.notes.length) return;
   
-    var cmd = ['G1', 'F'+(60e3/state.mtime).toFixed(2)].concat(mvmt).join(' ');
-    sendCommand(cmd);
-  }
+  // get the actual frequencies and sort highest first
+  var freqs = state.notes.map(freq).sort().reverse();
+  
+  // respective axis must do `scale*freq` steps in our time.
+  var distSqd = 0, tScale = (state.mtime / 1e3);
+  var mvmt = freqs.slice(0, axes.length).map(function (freq, i) {
+    var stepsNeeded = freq * tScale,
+        stepsPerUnit = mult[i],
+        units = stepsNeeded / stepsPerUnit;
+    distSqd += units*units;
+    return axes[i]+units.toFixed(4);
+  });
+  
+  // whole move must complete in `state.mtime` milliseconds.
+  var rate = 60e3 * Math.sqrt(distSqd) / state.mtime;
+  
+  var cmd = ['G1', 'F'+rate.toFixed(2)].concat(mvmt).join(' ');
+  sendCommand(cmd);
 }, state.mtime);
 
 var poll_midi = setInterval(function () {
@@ -74,7 +82,7 @@ function poll_com1() {
           sendCommand("$H");
           sendCommand("G0 X0 Y-190");
         }
-        sendCommand("G21 G91 G93");
+        sendCommand("G21 G91 G94");
       });
       cncPort.on('data', function (d) {
         console.log(d.toString());
