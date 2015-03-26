@@ -2,8 +2,8 @@ var midi = require('midi'),
     com1 = require('serialport');
 
 
-var axes = ['X', 'Y', 'Z', 'A', 'B', 'C'],
-    mult = [-400.000, 400.000, -400.000];
+var axes = ['Y', 'X', 'Z', 'A', 'B', 'C'],      // order: from longest axes to least present
+    mult = [400.000, -400.000, -400.000];
 axes.length = 3;      // truncate to what machine has
 
 function freq(n) {      // using http://newt.phys.unsw.edu.au/jw/notes.html temperment
@@ -21,7 +21,8 @@ setInterval(function () {
   var freqs = state.notes.map(freq).sort().reverse();
   
   // respective axis must do `scale*freq` steps in our time.
-  var distSqd = 0, tScale = (state.mtime / 1e3);
+  var moveTime = state.mtime + 10,       // fudge a bit for our slowness
+      distSqd = 0, tScale = (moveTime / 1e3);
   var mvmt = freqs.slice(0, axes.length).map(function (freq, i) {
     var stepsNeeded = freq * tScale,
         stepsPerUnit = mult[i],
@@ -31,7 +32,7 @@ setInterval(function () {
   });
   
   // whole move must complete in `state.mtime` milliseconds.
-  var rate = 60e3 * Math.sqrt(distSqd) / state.mtime;
+  var rate = 60e3 * Math.sqrt(distSqd) / moveTime;
   
   var cmd = ['G1', 'F'+rate.toFixed(2)].concat(mvmt).join(' ');
   sendCommand(cmd);
