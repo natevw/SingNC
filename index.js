@@ -19,7 +19,12 @@ setInterval(function () {
     return axes[i]+(f*mult[i]).toFixed(4);
   });
   if (mvmt.length) {
-    var cmd = ['F'+(1/60e3/state.mtime).toFixed(12)].concat(mvmt).join(' ');
+    // N ms = 1 min / X
+    // X * N ms = 1 min
+    // X = 1 min / N ms
+    // X = 60e3 / N ms
+  
+    var cmd = ['G1', 'F'+(60e3/state.mtime).toFixed(2)].concat(mvmt).join(' ');
     sendCommand(cmd);
   }
 }, state.mtime);
@@ -63,10 +68,13 @@ function poll_com1() {
       cncPort = this;
       cncPort.once('data', function () {
         // unlock, initialize necessary motion modes
-        //sendCommand("$X");
-        sendCommand("$H");
-        sendCommand("G0 X0 Y-190");
-        sendCommand("G1 G21 G91 G93 F42");
+        if (0) {
+          sendCommand("$X");
+        } else {
+          sendCommand("$H");
+          sendCommand("G0 X0 Y-190");
+        }
+        sendCommand("G21 G91 G93");
       });
       cncPort.on('data', function (d) {
         console.log(d.toString());
